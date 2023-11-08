@@ -31,13 +31,13 @@ fi
 
 echo "Evaluating $locked_url..." >&2
 
-if ! nix eval --json "path:$tmp_dir#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
+if ! (cd $tmp_dir && nix eval --no-allow-import-from-derivation --json "path:.#contents") > "$eval_out" 2> "$flake_dir/eval.stderr"; then
     echo "Flake $locked_url failed to evaluate." >&2
     exit 1
 fi
 
 if [[ $regenerate = 1 ]]; then
-    nix --version > "$tmp_dir/nix-version"
+    nix --version > "$flake_dir/nix-version"
     mv "$eval_out" "$contents"
 else
     if ! cmp -s "$contents" "$eval_out"; then
