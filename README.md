@@ -37,5 +37,5 @@ Then regenerate the test suite:
 # rm tests/*/*/*/done
 # REGENERATE=1 ./eval-all.sh
 # ./commit-all.sh
-# (cd tests && git commit && git push)
+# (cd tests && git commit -a && git push)
 ```
