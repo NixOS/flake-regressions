@@ -31,7 +31,7 @@ fi
 
 echo "Evaluating $locked_url..." >&2
 
-if ! (cd $tmp_dir && nix eval --no-allow-import-from-derivation --json "path:.#contents") > "$eval_out" 2> "$flake_dir/eval.stderr"; then
+if ! nix eval --no-allow-import-from-derivation --json "path:$(readlink -f $tmp_dir)#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
     echo "Flake $locked_url failed to evaluate." >&2
     exit 1
 fi
