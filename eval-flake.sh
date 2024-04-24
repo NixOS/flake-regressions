@@ -11,11 +11,13 @@ regenerate="$REGENERATE"
 
 locked_url="$(cat "$flake_dir"/locked-url)"
 
-store_path="$(nix flake metadata --json "$locked_url" | jq -r .path)"
+if [[ $regenerate = 1 ]]; then
+    store_path="$(nix flake metadata --json "$locked_url" | jq -r .path)"
 
-if ! [[ -e $store_path/flake.lock ]]; then
-    echo "Flake $locked_url is unlocked." >&2
-    exit 1
+    if ! [[ -e $store_path/flake.lock ]]; then
+        echo "Flake $locked_url is unlocked." >&2
+        exit 1
+    fi
 fi
 
 tmp_dir="$flake_dir/tmp-flake"
