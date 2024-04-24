@@ -21,6 +21,7 @@ if [[ $regenerate = 1 ]]; then
 fi
 
 tmp_dir="$flake_dir/tmp-flake"
+rm -rf "$tmp_dir"
 mkdir -p "$tmp_dir"
 
 sed "s|c9026fc0-ced9-48e0-aa3c-fc86c4c86df1|$locked_url|" < eval-flake.nix > "$tmp_dir/flake.nix"
