@@ -3,11 +3,13 @@
 set -eu
 set -o pipefail
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+
 flake_dir="$1"
 
 contents="$flake_dir/contents.json"
 
-regenerate="$REGENERATE"
+regenerate="${REGENERATE:-0}"
 
 locked_url="$(cat "$flake_dir"/locked-url)"
 
@@ -24,7 +26,7 @@ tmp_dir="$flake_dir/tmp-flake"
 rm -rf "$tmp_dir"
 mkdir -p "$tmp_dir"
 
-sed "s|c9026fc0-ced9-48e0-aa3c-fc86c4c86df1|$locked_url|" < eval-flake.nix > "$tmp_dir/flake.nix"
+sed "s|c9026fc0-ced9-48e0-aa3c-fc86c4c86df1|$locked_url|" < $script_dir/eval-flake.nix > "$tmp_dir/flake.nix"
 
 if [[ $regenerate = 1 ]]; then
     eval_out="$contents.tmp"
@@ -34,7 +36,7 @@ fi
 
 echo "Evaluating $locked_url..." >&2
 
-if ! nix eval --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(readlink -f $tmp_dir)#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
+if ! nix eval --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(readlink -f $tmp_dir)#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
     echo "Flake $locked_url failed to evaluate:" >&2
     cat "$flake_dir/eval.stderr" >&2
     exit 1
