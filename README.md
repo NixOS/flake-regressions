@@ -5,7 +5,7 @@ Scripts to generate/run flake regression tests.
 Get the regression data:
 
 ```shell
-# git clone git@github.com:DeterminateSystems/flake-regressions-data.git tests
+# git clone git@github.com:NixOS/flake-regressions-data.git tests
 ```
 
 # Running a version of Nix against the regression test suite
