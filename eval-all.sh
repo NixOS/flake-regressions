@@ -2,15 +2,12 @@
 
 set -eu
 
-: ${REGENERATE:=0}
+script_dir="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
 
-export REGENERATE
+cd "$script_dir"
 
-for i in tests/*/*/*; do
-    marker="$i/done"
-    if [[ -e $marker ]]; then continue; fi
-    if ! ./eval-flake.sh "$i"; then
-        touch "$i/failed"
-    fi
-    touch "$marker"
-done
+echo "Nix version: $(nix --version)"
+
+export CACHE_RUNS=1
+
+find tests -mindepth 3 -maxdepth 3 -type d -not -path '*/.*' | sort | head -n${MAX_FLAKES:-1000000} | parallel ./eval-flake.sh

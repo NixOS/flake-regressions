@@ -7,7 +7,25 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 flake_dir="$1"
 
+marker="$flake_dir/done"
+failed="$flake_dir/failed"
 contents="$flake_dir/contents.json"
+
+error_handler() {
+    echo "❌ $flake_dir" >&2
+    touch "$failed"
+}
+trap error_handler ERR
+
+show_success() {
+    printf "✅ $flake_dir\n" >&2
+}
+
+if [[ ${CACHE_RUNS:-0} = 1 && -e $marker ]]; then
+    [[ ! -e $failed ]]
+    show_success
+    exit 0
+fi
 
 regenerate="${REGENERATE:-0}"
 
@@ -51,10 +69,12 @@ if [[ $regenerate = 1 ]]; then
     mv "$eval_out" "$contents"
 else
     if ! cmp -s "$contents" "$eval_out"; then
-        echo "Evaluation mismatch on $locked_url." >&2
+        printf "Evaluation mismatch on %s." "$locked_url." >&2
         git diff --no-index --word-diff=porcelain --word-diff-regex='[^{}:"]+' "$contents" "$eval_out"
         exit 1
     fi
 fi
+
+show_success
 
 exit 0
