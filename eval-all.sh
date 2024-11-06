@@ -2,33 +2,12 @@
 
 set -eu
 
-SCRIPT_DIR="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
+script_dir="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
 
-cd "$SCRIPT_DIR"
+cd "$script_dir"
 
 echo "Nix version: $(nix --version)"
 
+export CACHE_RUNS=1
 
-: ${REGENERATE:=0}
-
-export REGENERATE
-
-status=0
-
-flakes=$(find tests -mindepth 3 -maxdepth 3 -type d -not -path '*/.*' | sort | head -n${MAX_FLAKES:-1000000})
-
-for flake in $flakes; do
-    marker="$flake/done"
-    failed="$flake/failed"
-    if [[ ! -e $marker ]]; then
-        if ! ./eval-flake.sh "$flake"; then
-            touch "$failed"
-        fi
-    fi
-    if [[ -e $failed ]]; then
-        echo "❌ $flake"
-    else
-        echo "✅ $flake"
-    fi
-    touch "$marker"
-done
+find tests -mindepth 3 -maxdepth 3 -type d -not -path '*/.*' | sort | head -n${MAX_FLAKES:-1000000} | parallel ./eval-flake.sh
