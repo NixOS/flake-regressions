@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
 
 cd "$SCRIPT_DIR"
 
-echo "Nix version:"
-nix --version
+echo "Nix version: $(nix --version)"
+
 
 : ${REGENERATE:=0}
 
@@ -19,12 +19,13 @@ flakes=$(find tests -mindepth 3 -maxdepth 3 -type d -not -path '*/.*' | sort | h
 
 for flake in $flakes; do
     marker="$flake/done"
+    failed="$flake/failed"
     if [[ ! -e $marker ]]; then
         if ! ./eval-flake.sh "$flake"; then
-            touch "$flake/failed"
+            touch "$failed"
         fi
     fi
-    if [[ -e $flake/failed ]]; then
+    if [[ -e $failed ]]; then
         echo "❌ $flake"
     else
         echo "✅ $flake"
