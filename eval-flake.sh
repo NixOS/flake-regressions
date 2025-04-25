@@ -12,7 +12,7 @@ failed="$flake_dir/failed"
 contents="$flake_dir/contents.json"
 
 error_handler() {
-    echo "❌ $flake_dir" >&2
+    printf "❌ $flake_dir\n" >&2
     touch "$failed"
 }
 trap error_handler ERR
@@ -40,6 +40,7 @@ if [[ $regenerate = 1 ]]; then
 
     if ! [[ -e $store_path/flake.lock ]]; then
         echo "Flake $locked_url is unlocked." >&2
+        error_handler
         exit 1
     fi
 fi
@@ -61,6 +62,7 @@ echo "Evaluating $locked_url..." >&2
 if ! GC_FREE_SPACE_DIVISOR=69 GC_ENABLE_INCREMENTAL=1 GC_INITIAL_HEAP_SIZE=16M nix eval --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(realpath "$tmp_dir")#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
     echo "Flake $locked_url failed to evaluate:" >&2
     cat "$flake_dir/eval.stderr" >&2
+    error_handler
     exit 1
 fi
 
@@ -71,6 +73,7 @@ else
     if ! cmp -s "$contents" "$eval_out"; then
         printf "Evaluation mismatch on %s." "$locked_url." >&2
         git diff --no-index --word-diff=porcelain --word-diff-regex='[^{}:"]+' "$contents" "$eval_out"
+        error_handler
         exit 1
     fi
 fi
