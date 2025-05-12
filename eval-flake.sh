@@ -11,6 +11,11 @@ marker="$flake_dir/done"
 failed="$flake_dir/failed"
 contents="$flake_dir/contents.json"
 
+if [[ -e "$flake_dir/disabled" ]]; then
+    printf "🚫 $flake_dir\n" >&2
+    exit 0
+fi
+
 error_handler() {
     printf "❌ $flake_dir\n" >&2
     touch "$failed"
