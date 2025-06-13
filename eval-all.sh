@@ -12,4 +12,4 @@ export CACHE_RUNS=1
 
 nix store info
 
-find tests -mindepth 3 -maxdepth 3 -type d -not -path '*/.*' | sort | head -n${MAX_FLAKES:-1000000} | parallel ./eval-flake.sh
+find tests -mindepth 3 -maxdepth 3 -type d -iname "${FLAKE_REGRESSION_GLOB:-*}" -not -path '*/.*' | sort | head -n${MAX_FLAKES:-1000000} | parallel ./eval-flake.sh
