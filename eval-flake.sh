@@ -64,7 +64,7 @@ fi
 
 echo "Evaluating $locked_url..." >&2
 
-if ! GC_FREE_SPACE_DIVISOR=69 GC_ENABLE_INCREMENTAL=1 GC_INITIAL_HEAP_SIZE=16M nix eval --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(realpath "$tmp_dir")#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
+if ! nix eval --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(realpath "$tmp_dir")#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
     echo "Flake $locked_url failed to evaluate:" >&2
     cat "$flake_dir/eval.stderr" >&2
     error_handler
