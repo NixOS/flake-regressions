@@ -11,6 +11,8 @@ marker="$flake_dir/done"
 failed="$flake_dir/failed"
 contents="$flake_dir/contents.json"
 
+store=/tmp/nix
+
 if [[ -e "$flake_dir/disabled" ]]; then
     printf "🚫 $flake_dir\n" >&2
     exit 0
@@ -23,7 +25,8 @@ error_handler() {
 trap error_handler ERR
 
 show_success() {
-    printf "✅ $flake_dir\n" >&2
+    local extra="$1"
+    printf "✅ $flake_dir $extra\n" >&2
 }
 
 if [[ ${CACHE_RUNS:-0} = 1 && -e $marker ]]; then
@@ -33,6 +36,7 @@ if [[ ${CACHE_RUNS:-0} = 1 && -e $marker ]]; then
 fi
 
 regenerate="${REGENERATE:-0}"
+prefetch="${PREFETCH:-0}"
 
 if [[ -e "$flake_dir"/flake.nix ]]; then
     locked_url="path:$(realpath "$flake_dir")"
@@ -41,7 +45,7 @@ else
 fi
 
 if [[ $regenerate = 1 ]]; then
-    store_path="$(nix flake metadata --json "$locked_url" | jq -r .path)"
+    store_path="$(nix flake metadata --store "$store" --json "$locked_url" | jq -r .path)"
 
     if ! [[ -e $store_path/flake.lock ]]; then
         echo "Flake $locked_url is unlocked." >&2
@@ -62,9 +66,20 @@ else
     eval_out="$flake_dir/contents-new.json"
 fi
 
+rm -f "$eval_out" "$flake_dir/eval.stderr"
+
+if [[ $prefetch = 1 ]]; then
+    echo "Prefetching $locked_url..." >&2
+    if ! nix flake prefetch-inputs --store "$store" "$locked_url" > "$flake_dir/prefetch.stderr" 2>&1; then
+        echo "Flake $locked_url failed to prefetch:" >&2
+        cat "$flake_dir/prefetch.stderr" >&2
+        # This is not a fatal error since some inputs are unused.
+    fi
+fi
+
 echo "Evaluating $locked_url..." >&2
 
-if ! nix eval --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(realpath "$tmp_dir")#contents" > "$eval_out" 2> "$flake_dir/eval.stderr"; then
+if ! command time -f 'elapsed=%e user=%U kernel=%S mem=%M' -o "$flake_dir/eval.timings" nix eval --store "$store" --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(realpath "$tmp_dir")#contents" >> "$eval_out" 2>> "$flake_dir/eval.stderr"; then
     echo "Flake $locked_url failed to evaluate:" >&2
     cat "$flake_dir/eval.stderr" >&2
     error_handler
@@ -83,6 +98,6 @@ else
     fi
 fi
 
-show_success
+show_success "[$(cat "$flake_dir/eval.timings")]"
 
 exit 0
