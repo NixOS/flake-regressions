@@ -35,28 +35,13 @@ fi
 
 regenerate="${REGENERATE:-0}"
 prefetch="${PREFETCH:-0}"
+use_show="${USE_NIX_FLAKE_SHOW:-0}"
 
 if [[ -e "$flake_dir"/flake.nix ]]; then
     locked_url="path:$(realpath "$flake_dir")"
 else
     locked_url="$(cat "$flake_dir"/locked-url)"
 fi
-
-if [[ $regenerate = 1 ]]; then
-    store_path="$(nix flake metadata --json "$locked_url" | jq -r .path)"
-
-    if ! [[ -e $store_path/flake.lock ]]; then
-        echo "Flake $locked_url is unlocked." >&2
-        error_handler
-        exit 1
-    fi
-fi
-
-tmp_dir="$flake_dir/tmp-flake"
-rm -rf "$tmp_dir"
-mkdir -p "$tmp_dir"
-
-sed "s|c9026fc0-ced9-48e0-aa3c-fc86c4c86df1|$locked_url|" < $script_dir/eval-flake.nix > "$tmp_dir/flake.nix"
 
 if [[ $regenerate = 1 ]]; then
     eval_out="$contents.tmp"
@@ -77,11 +62,30 @@ fi
 
 echo "Evaluating $locked_url..." >&2
 
-if ! command time -f 'elapsed=%e user=%U kernel=%S mem=%M' -o "$flake_dir/eval.timings" nix eval --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(realpath "$tmp_dir")#contents" >> "$eval_out" 2>> "$flake_dir/eval.stderr"; then
-    echo "Flake $locked_url failed to evaluate:" >&2
-    cat "$flake_dir/eval.stderr" >&2
-    error_handler
-    exit 1
+if [[ $use_show = 1 ]]; then
+
+    if ! command time -f 'elapsed=%e user=%U kernel=%S mem=%M' -o "$flake_dir/eval.timings" nix flake show --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json --no-update-lock-file --all-systems --output-paths --drv-paths --no-eval-cache "$locked_url" >> "$eval_out" 2>> "$flake_dir/eval.stderr"; then
+        echo "Flake $locked_url failed to evaluate:" >&2
+        cat "$flake_dir/eval.stderr" >&2
+        error_handler
+        exit 1
+    fi
+
+else
+
+    tmp_dir="$flake_dir/tmp-flake"
+    rm -rf "$tmp_dir"
+    mkdir -p "$tmp_dir"
+
+    sed "s|c9026fc0-ced9-48e0-aa3c-fc86c4c86df1|$locked_url|" < $script_dir/eval-flake.nix > "$tmp_dir/flake.nix"
+
+    if ! command time -f 'elapsed=%e user=%U kernel=%S mem=%M' -o "$flake_dir/eval.timings" nix eval --show-trace --no-allow-import-from-derivation --min-free 1000000000 --json "path:$(realpath "$tmp_dir")#contents" >> "$eval_out" 2>> "$flake_dir/eval.stderr"; then
+        echo "Flake $locked_url failed to evaluate:" >&2
+        cat "$flake_dir/eval.stderr" >&2
+        error_handler
+        exit 1
+    fi
+
 fi
 
 if [[ $regenerate = 1 ]]; then
