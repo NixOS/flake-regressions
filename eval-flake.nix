@@ -30,7 +30,7 @@
 
             # FIXME: make this configurable
             defaultSchemas =
-              (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.2.0/019a4a84-544d-7c59-b26d-e334e320c932/source.tar.gz?narHash=sha256-eK3/xbUOrxp9fFlei09XNjqcdiHXxndzrTXp7jFpOk8%3D")
+              (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.2.1/019c8ce4-cd63-7c3c-a4cf-d1e0788fdcd9/source.tar.gz?narHash=sha256-jRC1qRoRCrMjDalVfUMHFlKSkkA2q0RZWTDW0LsquoA%3D")
               .schemas;
 
             schemaOverrides = { };
