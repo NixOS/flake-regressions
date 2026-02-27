@@ -22,6 +22,14 @@
 
             mkChildren = children: { inherit children; };
 
+            getAttrFromPath =
+              attrPath: set:
+              let
+                f =
+                  n: set: if n >= builtins.length attrPath then set else f (n + 1) set.${builtins.elemAt attrPath n};
+              in
+              f 0 set;
+
           in
 
           rec {
@@ -30,7 +38,7 @@
 
             # FIXME: make this configurable
             defaultSchemas =
-              (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.2.1/019c8ce4-cd63-7c3c-a4cf-d1e0788fdcd9/source.tar.gz?narHash=sha256-jRC1qRoRCrMjDalVfUMHFlKSkkA2q0RZWTDW0LsquoA%3D")
+              (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.3.0/019c9f61-e746-760e-a1fe-53f05b10d026/source.tar.gz?narHash=sha256-hcUPpu25%2BVLvQsf961cu4zTeA//Ab35MaMjqSS/Ojqc%3D")
               .schemas;
 
             schemaOverrides = { };
@@ -62,25 +70,33 @@
                 outputName: schema:
                 let
                   doFilter =
-                    attrs:
-                    if filterFun attrs then
-                      if attrs ? children then
-                        mkChildren (builtins.mapAttrs (childName: child: doFilter child) attrs.children)
+                    outputInfo: output:
+                    if filterFun outputInfo then
+                      if outputInfo ? children then
+                        mkChildren (
+                          builtins.mapAttrs (childName: child: doFilter child output.${childName}) outputInfo.children
+                        )
                       else
-                        (if attrs ? what then { inherit (attrs) what; } else { })
-                        // (if attrs ? forSystems then { inherit (attrs) forSystems; } else { })
-                        // (if attrs ? shortDescription then { inherit (attrs) shortDescription; } else { })
+                        (if outputInfo ? what then { inherit (outputInfo) what; } else { })
+                        // (if outputInfo ? forSystems then { inherit (outputInfo) forSystems; } else { })
+                        // (if outputInfo ? shortDescription then { inherit (outputInfo) shortDescription; } else { })
                         // (
-                          if inputs.self.includeOutputPaths && attrs ? derivation then
+                          # FIXME: remove outputInfo.derivation support eventually.
+                          if
+                            inputs.self.includeOutputPaths && (outputInfo ? derivationAttrPath || outputInfo ? derivation)
+                          then
+                            let
+                              drv = outputInfo.derivation or (getAttrFromPath outputInfo.derivationAttrPath output);
+                            in
                             {
                               derivation = {
-                                name = attrs.derivation.name;
-                                path = builtins.unsafeDiscardStringContext attrs.derivation.drvPath;
+                                name = drv.name;
+                                path = builtins.unsafeDiscardStringContext drv.drvPath;
                                 outputs = builtins.listToAttrs (
                                   builtins.map (outputName: {
                                     name = outputName;
-                                    value = attrs.derivation.${outputName}.outPath;
-                                  }) attrs.derivation.outputs
+                                    value = drv.${outputName}.outPath;
+                                  }) drv.outputs
                                 );
                               };
                             }
@@ -98,7 +114,9 @@
                 else
                   {
                     doc = schema.doc;
-                    output = doFilter ((schema.inventory or (output: { })) flake.outputs.${outputName});
+                    output = doFilter ((schema.inventory or (output: { }))
+                      flake.outputs.${outputName}
+                    ) flake.outputs.${outputName};
                   }
               ) schemas;
 
