@@ -38,7 +38,7 @@
 
             # FIXME: make this configurable
             defaultSchemas =
-              (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.3.0/019c9f61-e746-760e-a1fe-53f05b10d026/source.tar.gz?narHash=sha256-hcUPpu25%2BVLvQsf961cu4zTeA//Ab35MaMjqSS/Ojqc%3D")
+              (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.4.0/019cfd60-4ae2-753f-8f8a-d718c39f31ed/source.tar.gz?narHash=sha256-ncGXLsh87OYfoF5zmtIY9GK217VaE6nwaNYPGZMrL8c%3D")
               .schemas;
 
             schemaOverrides = { };
@@ -72,7 +72,11 @@
                   doFilter =
                     outputInfo: output:
                     if filterFun outputInfo then
-                      if outputInfo ? children then
+                      if outputInfo ? isLegacy then
+                        {
+                          isLegacy = true;
+                        }
+                      else if outputInfo ? children then
                         mkChildren (
                           builtins.mapAttrs (childName: child: doFilter child output.${childName}) outputInfo.children
                         )
@@ -106,18 +110,12 @@
                     else
                       { };
                 in
-                # Ignore legacyPackages for now, since it's very big and throws uncatchable errors.
-                if outputName == "legacyPackages" then
-                  {
-                    skipped = true;
-                  }
-                else
-                  {
-                    doc = schema.doc;
-                    output = doFilter ((schema.inventory or (output: { }))
-                      flake.outputs.${outputName}
-                    ) flake.outputs.${outputName};
-                  }
+                {
+                  doc = schema.doc;
+                  output = doFilter ((schema.inventory or (output: { }))
+                    flake.outputs.${outputName}
+                  ) flake.outputs.${outputName};
+                }
               ) schemas;
 
             inventory =
