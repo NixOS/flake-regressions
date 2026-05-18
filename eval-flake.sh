@@ -93,7 +93,7 @@ if [[ $regenerate = 1 ]]; then
     mv "$eval_out" "$contents"
 else
     if ! cmp -s "$contents" "$eval_out"; then
-        printf "Evaluation mismatch on %s." "$locked_url." >&2
+        printf "Evaluation mismatch on %s." "$locked_url.\n" >&2
         git diff --no-index --word-diff=porcelain --word-diff-regex='[^{}:"]+' "$contents" "$eval_out"
         error_handler
         exit 1
